@@ -1,0 +1,17 @@
+
+#dir_path: ../../../internal/repositories/database
+#db_name: postgresql
+
+version: "2"
+sql:
+  - schema: "../../../internal/repositories/database/postgresql/migrations/"
+    queries: "../../../internal/repositories/database/postgresql/query/"
+    engine: "postgresql"
+    gen:
+      go:
+        package: "db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_interface: true
+        emit_empty_slices: true
+        out: "../../../internal/repositories/database/postgresql/sqlc"
