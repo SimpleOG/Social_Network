@@ -1,12 +1,22 @@
 -- name: CreateUser :one
-INSERT INTO users (
-    username,
-    email,
-    password
-) VALUES
-($1,$2,$3 )
+INSERT INTO users (username,
+                   password)
+VALUES ($1, $2)
 RETURNING *;
 
--- name: GetUserByData :one
-SELECT * FROM users
-WHERE username=$1 and password=$2;
+-- name: GetUserByUsername :one
+SELECT *
+FROM users
+WHERE username = $1;
+
+-- name: GetUserForLogin :one
+SELECT *
+FROM users
+WHERE username = $1
+  and password = $2;
+
+-- name: GetUsersById :one
+SELECT *
+From users
+WHERE id = $1;
+

@@ -9,8 +9,12 @@ import (
 )
 
 type Querier interface {
+	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	GetUserByData(ctx context.Context, arg GetUserByDataParams) (User, error)
+	GetRoomByUsers(ctx context.Context, arg GetRoomByUsersParams) (string, error)
+	GetUserByUsername(ctx context.Context, username string) (User, error)
+	GetUserForLogin(ctx context.Context, arg GetUserForLoginParams) (User, error)
+	GetUsersById(ctx context.Context, id int32) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

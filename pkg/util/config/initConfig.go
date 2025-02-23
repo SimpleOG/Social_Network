@@ -1,9 +1,11 @@
-package init
+package config
 
 import "github.com/spf13/viper"
 
 type Config struct {
-	DBDriver string `mapstructure:"DB_DRIVER"`
+	DbSource     string `mapstructure:"DB_SOURCE"`
+	MigrationUrl string `mapstructure:"MIGRATION_URL"`
+	SecretKey    string `mapstructure:"SECRET_KEY"`
 }
 
 func InitConfig(path string) (config Config, err error) {

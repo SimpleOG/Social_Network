@@ -8,10 +8,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Room struct {
+	ID         int32  `json:"id"`
+	RoomUnique string `json:"room_unique"`
+	User1      int32  `json:"user1"`
+	User2      int32  `json:"user2"`
+}
+
 type User struct {
 	ID        int32              `json:"id"`
 	Username  string             `json:"username"`
-	Email     string             `json:"email"`
 	Password  string             `json:"password"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }

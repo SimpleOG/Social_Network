@@ -9,23 +9,31 @@ import (
 
 type AuthorizationServiceInterface interface {
 	SingIn(userParams db.CreateUserParams) (db.User, error)
-	Login(params db.GetUserByDataParams) (db.User, error)
+	Login(userParams db.GetUserForLoginParams) (string, error)
+	ValidateToken(token string) (int32, error)
 }
 type AuthService struct {
 	querier       db.Querier
 	authInterface jwt.Authorization
 }
 
+func NewAuthService(q db.Querier, auth jwt.Authorization) AuthorizationServiceInterface {
+	return &AuthService{
+		querier:       q,
+		authInterface: auth,
+	}
+}
+
 // Регистрация пользователя
 func (a *AuthService) SingIn(userParams db.CreateUserParams) (db.User, error) {
-	//проверка что пользователя нет в системе
-	arg := db.GetUserByDataParams{
-		Username: userParams.Username,
-		Password: userParams.Password,
-	}
-	user, err := a.querier.GetUserByData(context.Background(), arg)
+	//Проверяем что пользователя нет в бд для регистрации
+
+	user, err := a.querier.GetUserByUsername(context.Background(), userParams.Username)
+
 	if err != nil {
-		return db.User{}, nil
+		if err.Error() != "no rows in result set" {
+			return db.User{}, err
+		}
 	}
 	if user.ID != 0 {
 		return db.User{}, errors.New("user already exists")
@@ -42,14 +50,26 @@ func (a *AuthService) SingIn(userParams db.CreateUserParams) (db.User, error) {
 	}
 	return NewUser, nil
 }
-func (a *AuthService) Login(params db.GetUserByDataParams, SecretKey string) (string, error) {
-	user, err := a.querier.GetUserByData(context.Background(), params)
+func (a *AuthService) Login(userParams db.GetUserForLoginParams) (string, error) {
+	user, err := a.querier.GetUserByUsername(context.Background(), userParams.Username)
 	if err != nil {
 		return "", err
 	}
-	token, err := a.authInterface.GenerateToken(user.Password, SecretKey)
+	token, err := a.authInterface.GenerateToken(userParams.Password, user.Password, user.Username)
 	if err != nil {
 		return "", err
 	}
 	return token, nil
+}
+func (a *AuthService) ValidateToken(token string) (int32, error) {
+	claimsMap, err := a.authInterface.ValidateToken(token)
+	if err != nil {
+		return 0, err
+	}
+	//Проверяем наличие пользователя в системе
+	user, err := a.querier.GetUserByUsername(context.Background(), claimsMap["sub"].(string))
+	if err != nil {
+		return 0, err
+	}
+	return user.ID, nil
 }
