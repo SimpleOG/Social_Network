@@ -35,21 +35,53 @@ func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, e
 	return i, err
 }
 
+const deleteAllRooms = `-- name: DeleteAllRooms :exec
+DELETE from room
+`
+
+func (q *Queries) DeleteAllRooms(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteAllRooms)
+	return err
+}
+
+const getAllExistingRooms = `-- name: GetAllExistingRooms :many
+
+SELECT id, room_unique, user1, user2 FROM room
+`
+
+func (q *Queries) GetAllExistingRooms(ctx context.Context) ([]Room, error) {
+	rows, err := q.db.Query(ctx, getAllExistingRooms)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Room{}
+	for rows.Next() {
+		var i Room
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoomUnique,
+			&i.User1,
+			&i.User2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRoomByUsers = `-- name: GetRoomByUsers :one
 SELECT room_unique
 FROM room
-WHERE (user1 = $1 and user2 = $2)
-     or
-      (user1 = $2 and user2 = $1)
+WHERE user_id = ANY ($1::int[])
 `
 
-type GetRoomByUsersParams struct {
-	User1 int32 `json:"user1"`
-	User2 int32 `json:"user2"`
-}
-
-func (q *Queries) GetRoomByUsers(ctx context.Context, arg GetRoomByUsersParams) (string, error) {
-	row := q.db.QueryRow(ctx, getRoomByUsers, arg.User1, arg.User2)
+func (q *Queries) GetRoomByUsers(ctx context.Context, dollar_1 []int32) (string, error) {
+	row := q.db.QueryRow(ctx, getRoomByUsers, dollar_1)
 	var room_unique string
 	err := row.Scan(&room_unique)
 	return room_unique, err

@@ -9,9 +9,15 @@ import (
 )
 
 type Querier interface {
+	ChangeDeliveryTipe(ctx context.Context, id int32) error
+	CreateMessage(ctx context.Context, arg CreateMessageParams) error
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	GetRoomByUsers(ctx context.Context, arg GetRoomByUsersParams) (string, error)
+	DeleteAllRooms(ctx context.Context) error
+	GetAllExistingRooms(ctx context.Context) ([]Room, error)
+	GetAllUndeliveredMessages(ctx context.Context, arg GetAllUndeliveredMessagesParams) ([]Message, error)
+	GetMessagesForRoom(ctx context.Context, roomID string) ([]Message, error)
+	GetRoomByUsers(ctx context.Context, dollar_1 []int32) (string, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserForLogin(ctx context.Context, arg GetUserForLoginParams) (User, error)
 	GetUsersById(ctx context.Context, id int32) (User, error)

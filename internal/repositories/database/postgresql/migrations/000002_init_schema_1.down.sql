@@ -1,1 +1,2 @@
 DROP TABLE room CASCADE ;
+DROP TABLE messages CASCADE ;

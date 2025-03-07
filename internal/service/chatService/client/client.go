@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	db "github.com/SimpleOG/Social_Network/internal/repositories/database/postgresql/sqlc"
 	"github.com/SimpleOG/Social_Network/internal/repositories/redis"
@@ -18,13 +19,20 @@ type Client struct {
 	Socket   *websocket.Conn
 	UserInfo *db.User
 	RClient  *redis.RedisStore
+	Done     chan int32
+}
+type ClientMessage struct {
+	MessageOwner int32  `json:"message_owner"`
+	Content      string `json:"content"`
 }
 
-func NewClient(user *db.User, ws *websocket.Conn) *Client {
+func NewClient(user *db.User, ws *websocket.Conn, done chan int32, redis *redis.RedisStore) *Client {
 	return &Client{
 		MsgChan:  make(chan string, 1024),
 		Socket:   ws,
 		UserInfo: user,
+		Done:     done,
+		RClient:  redis,
 	}
 }
 
@@ -33,17 +41,22 @@ func (c *Client) Write() {
 	defer c.Socket.Close()
 
 	for {
-		fmt.Println("Я жду сообщение")
+
 		select {
 		case message, ok := <-c.MsgChan:
 			if !ok {
 				continue
 			}
-			log.Println("Вот и сообщения пишутся")
 			// Отправляем сообщение через вебсокет
 			if err := c.Socket.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
-				log.Println("Write error:", err)
-				continue
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Println("Ошибка неожиданного закрытия", err)
+					return
+				} else if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					log.Println("Нормальное завершение  ", err)
+					return
+				}
+				log.Println(err)
 			}
 		}
 
@@ -54,17 +67,38 @@ func (c *Client) Write() {
 // ПРОЧИТАТЬ что юзер написал
 func (c *Client) Read(redisChan string) {
 	defer c.Socket.Close()
-	log.Println("Я читаю")
 	for {
+		if c.UserInfo.ID == 1 {
+			fmt.Println("Я читаю  че юзер пишет")
+		}
 		_, msg, err := c.Socket.ReadMessage()
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Println("Ошибка неожиданного закрытия", err)
+				return
+			} else if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				log.Println("Нормальное завершение  ", err)
+				return
+			}
 			log.Println(err)
+
 		}
-		log.Println(string(msg))
-		err = c.RClient.SendMsgToChan(redisChan, msg)
+
+		clientMsg, err := json.Marshal(ClientMessage{
+			MessageOwner: c.UserInfo.ID,
+			Content:      string(msg),
+		})
+
+		if err != nil {
+			log.Println("Ошибка маршалинга :", err.Error())
+			continue
+		}
+		err = c.RClient.SendMsgToChan(redisChan, clientMsg)
+
 		if err != nil {
 			log.Println(err)
 		}
+
 	}
 
 }

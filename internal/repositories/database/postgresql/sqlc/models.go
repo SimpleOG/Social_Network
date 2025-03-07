@@ -8,6 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Message struct {
+	ID             int32              `json:"id"`
+	RoomID         string             `json:"room_id"`
+	MessageContent string             `json:"message_content"`
+	MessageOwner   int32              `json:"message_owner"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	WasDelivered   bool               `json:"was_delivered"`
+}
+
 type Room struct {
 	ID         int32  `json:"id"`
 	RoomUnique string `json:"room_unique"`

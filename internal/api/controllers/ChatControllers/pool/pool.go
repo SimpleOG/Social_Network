@@ -10,6 +10,7 @@ import (
 	"github.com/SimpleOG/Social_Network/pkg/util/httpResponse"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -34,7 +35,7 @@ func NewPoolHandlers(service service.Service, upgrader *websocket.Upgrader) Pool
 		upgrader: upgrader,
 	}
 }
-func (p *Pool) GetIdFromSet(user any) (db.User, error) {
+func (p *Pool) GetIdFromCtx(user any) (db.User, error) {
 	//получаем текущего пользователя( ужасный процесс)
 	current_id, ok := user.(int32)
 	if !ok {
@@ -50,15 +51,15 @@ func (p *Pool) ServeRoomsConnections(ctx *gin.Context) {
 	//чекаем что в принципе указано с кем хотим попиздеть
 	query := ctx.Query("id")
 	if len(query) == 0 {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "partners id must be specified"})
+		ctx.JSON(http.StatusNotFound, httpResponse.ErrorResponse(errors.New("partners id must be specified")))
 		return
 	}
 	//берем юзера из бд
 	user, ok := ctx.Get("id")
 	if !ok {
-		ctx.JSON(http.StatusUnprocessableEntity, "Пользователь не найден")
+		ctx.JSON(http.StatusUnprocessableEntity, httpResponse.ErrorResponse(errors.New("пользователь не найден")))
 	}
-	CurrentUser, err := p.GetIdFromSet(user)
+	CurrentUser, err := p.GetIdFromCtx(user)
 	if err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, httpResponse.ErrorResponse(err))
 	}
@@ -75,37 +76,33 @@ func (p *Pool) ServeRoomsConnections(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, httpResponse.ErrorResponse(err))
 	}
-	//Создаем клиента
-
-	CurrentClient := client.NewClient(&CurrentUser, ws)
 	//Проверяем есть ли комната для текущих юзеров в бд
-	//Я кстати рот ебал, из за того что создаются в ифах комнаты их вне ифов не видно
 	var room *room2.Room
 	//Если комната есть то добавляем юзера в неё и пусть пиздят
 	room, ok = p.service.Pool.CheckIfRoomExists([]int32{CurrentUser.ID, conversator.ID})
-	if ok {
-		CurrentClient.RClient = room.RedisClient
-		room.Clients[CurrentClient] = struct{}{}
-	}
 	//Если комнаты нет , то генерируем комнату
 	if !ok {
 		//Сначала добавляем руму в бд с инфой про uuid и про юзеров которые в ней должны быть
-
 		room, err = p.service.Pool.CreateRoom([2]int32{CurrentUser.ID, conversator.ID})
 		if err != nil {
 			return
 		}
-		//прокидываем редис до клиента
-		CurrentClient.RClient = room.RedisClient
-		//Докидываем в руму пользователей
-		room.Clients[CurrentClient] = struct{}{}
+
 	}
+	CurrentClient := client.NewClient(&CurrentUser, ws, room.DeleteClientChan, room.RedisClient)
+	//прокидываем редис до клиента
+	CurrentClient.RClient = room.RedisClient
+	//Докидываем в руму пользователей
+	room.NewClientChan <- CurrentClient
+	//ебашим контекст для нормального завершение
 	//Теперь пусть смски читаются
 	go CurrentClient.Write()
 	CurrentClient.Read(room.RoomUUID)
 
 	defer func() {
-		room.DeleteClientChan <- CurrentClient
+		log.Println("User is disconnected, start cleaning")
+		CurrentClient.Done <- CurrentClient.UserInfo.ID
+		close(CurrentClient.MsgChan)
 		ws.Close()
 	}()
 

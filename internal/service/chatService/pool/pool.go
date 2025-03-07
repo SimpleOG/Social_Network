@@ -13,15 +13,16 @@ type PoolInterface interface {
 	//Сразу добавляем в бд и всю хуйню
 	CreateRoom([2]int32) (*room.Room, error)
 	StartPools()
-	CheckIfRoomExists(arr []int32) (*room.Room, bool)
+	CheckIfRoomExists(arr ...) (*room.Room, bool)
 }
 
-// ключ это юзеры, значение рума для них
+// Pool ключ это юзеры, значение рума для них
 type Pool struct {
 	Rooms       map[string]*room.Room
 	querier     db.Querier
 	redisClient *redis.RedisStore
 	addRooms    chan *room.Room
+	DeleteRoom  chan string
 }
 
 func NewPool(q db.Querier, store *redis.RedisStore) *Pool {
@@ -30,6 +31,7 @@ func NewPool(q db.Querier, store *redis.RedisStore) *Pool {
 		querier:     q,
 		redisClient: store,
 		addRooms:    make(chan *room.Room, 1024),
+		DeleteRoom:  make(chan string, 1024),
 	}
 }
 func (p *Pool) CheckIfRoomExists(arr []int32) (*room.Room, bool) {
@@ -59,7 +61,7 @@ func (p *Pool) CreateRoom(users [2]int32) (*room.Room, error) {
 	if err != nil {
 		return nil, err
 	}
-	Room := room.NewRoom(db_room.RoomUnique, p.redisClient)
+	Room := room.NewRoom(db_room.RoomUnique, p.redisClient, p.querier)
 	p.Rooms[Room.RoomUUID] = Room
 	log.Println("Комната добавляется в пул")
 	p.addRooms <- Room
@@ -68,9 +70,7 @@ func (p *Pool) CreateRoom(users [2]int32) (*room.Room, error) {
 func (p *Pool) StartPools() {
 	log.Println("Пул запущен")
 	//запуск для уже существующих комнат
-	for _, room := range p.Rooms {
-		go room.Run()
-	}
+	go p.PoolPools()
 	//горутина которая запускает новые каналы
 	go func() {
 		for room := range p.addRooms {
@@ -78,4 +78,19 @@ func (p *Pool) StartPools() {
 			go room.Run()
 		}
 	}()
+}
+
+// Подтягиваем пулы из бд
+func (p *Pool) PoolPools() error {
+	pools, err := p.querier.GetAllExistingRooms(context.Background())
+	if err != nil {
+		log.Println(err)
+	}
+	for _, v := range pools {
+		go func(v db.Room) {
+			p.Rooms[v.RoomUnique] = room.NewRoom(v.RoomUnique, p.redisClient, p.querier)
+			go p.Rooms[v.RoomUnique].Run()
+		}(v)
+	}
+	return nil
 }
