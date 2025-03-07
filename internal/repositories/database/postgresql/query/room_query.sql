@@ -8,7 +8,7 @@ RETURNING *;
 -- name: GetRoomByUsers :one
 SELECT room_unique
 FROM room
-WHERE user_id = ANY ($1::int[]);
+WHERE (user1=$1 and user2=$2) or (user1=$2 and user2=$1);
 
 -- name: GetAllExistingRooms :many
 

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 	"log"
+	"net/http"
 )
 
 var (
@@ -39,6 +40,7 @@ func main() {
 		ReadBufferSize:  ReadBufferSize,
 		WriteBufferSize: WriteBufferSize,
 	}
+	upgrader.CheckOrigin = func(c *http.Request) bool { return true }
 	AuthInterface := jwt.NewJwtAuth(config.SecretKey)
 	client, err := redis.NewRedisClient()
 	if err != nil {

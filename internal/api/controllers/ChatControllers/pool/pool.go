@@ -70,7 +70,7 @@ func (p *Pool) ServeRoomsConnections(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, httpResponse.ErrorResponse(err))
 		return
 	}
-	p.upgrader.CheckOrigin = func(c *http.Request) bool { return true }
+
 	//если есть в системе то открываем коннект
 	ws, err := p.upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {

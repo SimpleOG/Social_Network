@@ -77,11 +77,16 @@ func (q *Queries) GetAllExistingRooms(ctx context.Context) ([]Room, error) {
 const getRoomByUsers = `-- name: GetRoomByUsers :one
 SELECT room_unique
 FROM room
-WHERE user_id = ANY ($1::int[])
+WHERE (user1=$1 and user2=$2) or (user1=$2 and user2=$1)
 `
 
-func (q *Queries) GetRoomByUsers(ctx context.Context, dollar_1 []int32) (string, error) {
-	row := q.db.QueryRow(ctx, getRoomByUsers, dollar_1)
+type GetRoomByUsersParams struct {
+	User1 int32 `json:"user1"`
+	User2 int32 `json:"user2"`
+}
+
+func (q *Queries) GetRoomByUsers(ctx context.Context, arg GetRoomByUsersParams) (string, error) {
+	row := q.db.QueryRow(ctx, getRoomByUsers, arg.User1, arg.User2)
 	var room_unique string
 	err := row.Scan(&room_unique)
 	return room_unique, err

@@ -13,7 +13,7 @@ type PoolInterface interface {
 	//Сразу добавляем в бд и всю хуйню
 	CreateRoom([2]int32) (*room.Room, error)
 	StartPools()
-	CheckIfRoomExists(arr ...) (*room.Room, bool)
+	CheckIfRoomExists(arr []int32) (*room.Room, bool)
 }
 
 // Pool ключ это юзеры, значение рума для них
@@ -37,14 +37,13 @@ func NewPool(q db.Querier, store *redis.RedisStore) *Pool {
 func (p *Pool) CheckIfRoomExists(arr []int32) (*room.Room, bool) {
 	arg := db.GetRoomByUsersParams{
 		User1: arr[0],
-		User2: arr[1],
-	}
+		User2: arr[1]}
 	roomID, err := p.querier.GetRoomByUsers(context.Background(), arg)
 	if err != nil {
 		return nil, false
 	}
 	currentRoom := p.Rooms[roomID]
-	log.Printf("Комната для %v, %v найдена", arg.User1, arg.User2)
+	log.Printf("Комната для %v найдена", arr)
 	return currentRoom, true
 }
 func (p *Pool) CreateRoom(users [2]int32) (*room.Room, error) {
