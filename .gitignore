@@ -1,2 +1,4 @@
 .idea
 config/env/app.env
+repositories/database/Amazon_S3
+

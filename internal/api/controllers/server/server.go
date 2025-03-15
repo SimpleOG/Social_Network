@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/SimpleOG/Social_Network/internal/api/controllers/ChatControllers/pool"
+	"github.com/SimpleOG/Social_Network/internal/api/controllers/MediaControllers"
 	"github.com/SimpleOG/Social_Network/internal/api/controllers/userControllers"
 	"github.com/SimpleOG/Social_Network/internal/service"
 	"github.com/gorilla/websocket"
@@ -11,14 +12,16 @@ import (
 )
 
 type Controllers struct {
-	AuthHandlers userControllers.AuthHandlersInterface
-	PoolHandlers pool.PoolHandlersInterface
+	AuthHandlers  userControllers.AuthHandlersInterface
+	PoolHandlers  pool.PoolHandlersInterface
+	MediaHandlers MediaControllers.MediaControllersInteface
 }
 
 func NewControllers(service service.Service, upgrader *websocket.Upgrader) Controllers {
 	return Controllers{
-		AuthHandlers: userControllers.NewAuthHandlers(service),
-		PoolHandlers: pool.NewPoolHandlers(service, upgrader),
+		AuthHandlers:  userControllers.NewAuthHandlers(service),
+		PoolHandlers:  pool.NewPoolHandlers(service, upgrader),
+		MediaHandlers: MediaControllers.NewMediaControllers(service),
 	}
 }
 
@@ -43,15 +46,30 @@ func (s *Server) Start(address string) error {
 }
 
 func (s *Server) InitRoutes() {
+	s.InitAuthRoutes()
+	s.InitChatRoutes()
+	s.InitMediaRoutes()
 
+}
+func (s *Server) InitAuthRoutes() {
 	auth := s.router.Group("/auth")
 	{
 		auth.POST("/sign_in", s.controllers.AuthHandlers.SingIn)
 		auth.POST("/login", s.controllers.AuthHandlers.Login)
 		auth.GET("/validate", s.controllers.AuthHandlers.RequireAuth, s.controllers.AuthHandlers.Validate)
 	}
+}
+
+func (s *Server) InitChatRoutes() {
 	chat := s.router.Group("/chat", s.controllers.AuthHandlers.RequireAuth)
 	{
 		chat.GET("/createChat", s.controllers.PoolHandlers.ServeRoomsConnections)
+	}
+}
+func (s *Server) InitMediaRoutes() {
+	media := s.router.Group("/media", s.controllers.AuthHandlers.RequireAuth)
+	{
+		media.POST("/upload", s.controllers.MediaHandlers.UploadFile)
+
 	}
 }

@@ -9,15 +9,17 @@ import (
 )
 
 type Service struct {
-	Auth    authService.AuthorizationServiceInterface
-	Pool    pool.PoolInterface
+	Auth authService.AuthorizationServiceInterface
+	Pool pool.PoolInterface
+	//MediaService MediaService.MediaServiceInterface
 	Querier db.Querier
 }
 
 func NewService(q db.Querier, auth jwt.Auth, redis *redis.RedisStore) Service {
 	return Service{
-		authService.NewAuthService(q, auth),
-		pool.NewPool(q, redis),
-		q,
+		Auth: authService.NewAuthService(q, auth),
+		Pool: pool.NewPool(q, redis),
+		//MediaService: MediaService.NewMediaService(q),
+		Querier: q,
 	}
 }

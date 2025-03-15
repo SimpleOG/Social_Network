@@ -21,7 +21,7 @@ dropdb:
 	docker exec -it $(postgres_name) dropdb $(db_name)
 
 mg_create:
-	migrate create -ext sql -dir $(migrate_dir_path) -seq init_schema_1
+	migrate create -ext sql -dir $(migrate_dir_path) -seq init_schema_2
 mg_up:
 	migrate -path $(migrate_dir_path) -database $(db_source) -verbose up
 mg_down:

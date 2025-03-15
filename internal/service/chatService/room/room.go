@@ -137,7 +137,6 @@ func (r *Room) Run() {
 					if client.UserInfo.ID != msg.MessageOwner {
 						client.MsgChan <- msg.Content
 					}
-
 				}()
 			}
 

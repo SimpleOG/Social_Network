@@ -58,10 +58,12 @@ func (p *Pool) ServeRoomsConnections(ctx *gin.Context) {
 	user, ok := ctx.Get("id")
 	if !ok {
 		ctx.JSON(http.StatusUnprocessableEntity, httpResponse.ErrorResponse(errors.New("пользователь не найден")))
+		return
 	}
 	CurrentUser, err := p.GetIdFromCtx(user)
 	if err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, httpResponse.ErrorResponse(err))
+		return
 	}
 	//чекаем что собеседник  есть в системе
 	id, err := strconv.Atoi(query)
@@ -75,6 +77,7 @@ func (p *Pool) ServeRoomsConnections(ctx *gin.Context) {
 	ws, err := p.upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, httpResponse.ErrorResponse(err))
+		return
 	}
 	//Проверяем есть ли комната для текущих юзеров в бд
 	var room *room2.Room
