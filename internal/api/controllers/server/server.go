@@ -5,10 +5,9 @@ import (
 	"github.com/SimpleOG/Social_Network/internal/api/controllers/MediaControllers"
 	"github.com/SimpleOG/Social_Network/internal/api/controllers/userControllers"
 	"github.com/SimpleOG/Social_Network/internal/service"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"log"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Controllers struct {
@@ -31,6 +30,7 @@ type Server struct {
 }
 
 func NewServer(router *gin.Engine, service service.Service, upgrader *websocket.Upgrader) (*Server, error) {
+
 	server := &Server{
 		router:      router,
 		controllers: NewControllers(service, upgrader),
@@ -41,6 +41,7 @@ func NewServer(router *gin.Engine, service service.Service, upgrader *websocket.
 }
 func (s *Server) Start(address string) error {
 	go s.controllers.PoolHandlers.ServePools()
+
 	log.Println("Сервер запустился")
 	return s.router.Run(address)
 }
@@ -57,6 +58,7 @@ func (s *Server) InitAuthRoutes() {
 		auth.POST("/sign_in", s.controllers.AuthHandlers.SingIn)
 		auth.POST("/login", s.controllers.AuthHandlers.Login)
 		auth.GET("/validate", s.controllers.AuthHandlers.RequireAuth, s.controllers.AuthHandlers.Validate)
+		auth.POST("logout")
 	}
 }
 
@@ -67,9 +69,9 @@ func (s *Server) InitChatRoutes() {
 	}
 }
 func (s *Server) InitMediaRoutes() {
-	media := s.router.Group("/media", s.controllers.AuthHandlers.RequireAuth)
+	media := s.router.Group("/media") //, s.controllers.AuthHandlers.RequireAuth
 	{
-		media.POST("/upload", s.controllers.MediaHandlers.UploadFile)
-
+		media.POST("/upload", s.controllers.MediaHandlers.UploadImage)
+		media.POST("/download", s.controllers.MediaHandlers.DownloadImage)
 	}
 }

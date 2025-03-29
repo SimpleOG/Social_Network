@@ -14,6 +14,7 @@ type AuthHandlersInterface interface {
 	Login(ctx *gin.Context)
 	RequireAuth(ctx *gin.Context)
 	Validate(ctx *gin.Context)
+	Logout(ctx *gin.Context)
 }
 
 type AuthHandlers struct {
@@ -45,7 +46,14 @@ func (a AuthHandlers) SingIn(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, gin.H{"User data": user})
 }
+func (a AuthHandlers) Logout(ctx *gin.Context) {
+	// Удаляем куки
+	ctx.SetCookie("Authorization", "", -1, "/", "localhost", false, true)
 
+	ctx.JSON(200, gin.H{
+		"message": "Сессия завершена",
+	})
+}
 func (a AuthHandlers) Login(ctx *gin.Context) {
 	var searchParams db.GetUserForLoginParams
 	if err := ctx.ShouldBindJSON(&searchParams); err != nil {
@@ -58,7 +66,8 @@ func (a AuthHandlers) Login(ctx *gin.Context) {
 		return
 	}
 	ctx.SetSameSite(http.SameSiteLaxMode)
-	ctx.SetCookie("Authorization", token, 3600*24*30, "", "", true, true)
+	ctx.SetCookie("Authorization", token, 3600*24*30, "", "", false, false)
+	ctx.JSON(http.StatusOK, "Успешно")
 }
 
 func (a AuthHandlers) Validate(ctx *gin.Context) {

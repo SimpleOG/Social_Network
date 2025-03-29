@@ -8,6 +8,7 @@ import (
 	"github.com/SimpleOG/Social_Network/internal/service"
 	"github.com/SimpleOG/Social_Network/pkg/jwt"
 	"github.com/SimpleOG/Social_Network/pkg/util/config"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -27,7 +28,14 @@ var (
 func main() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
-	//gin.SetMode(gin.ReleaseMode)
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"}, // Разрешенные источники (ваш фронтенд)
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true, // Разрешить передачу куки и авторизационных данных
+	}))
+
 	config, err := config.InitConfig("config/env")
 	if err != nil {
 		log.Fatalln(err)
